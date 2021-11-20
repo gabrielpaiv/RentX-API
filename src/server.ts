@@ -1,6 +1,9 @@
 import './database'
-import express from 'express'
+
+import './shared/container'
+
 import swaggerUI from 'swagger-ui-express'
+import express from 'express'
 
 import swaggerFile from './swagger.json'
 
