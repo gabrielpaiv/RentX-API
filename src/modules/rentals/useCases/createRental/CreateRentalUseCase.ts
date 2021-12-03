@@ -1,7 +1,7 @@
 import { Rental } from '@modules/rentals/infra/typeorm/entities/Rental'
 import { IRentalsRepository } from '@modules/rentals/repositories/IRentalsRepository'
+import { IDateProvider } from '@shared/container/providers/DateProvider/IDateProvider'
 import { AppError } from '@shared/errors/AppError'
-import { TreeChildren } from 'typeorm'
 
 interface IRequest {
   user_id: string
@@ -10,12 +10,17 @@ interface IRequest {
 }
 
 class CreateRentalUseCase {
-  constructor(private rentalsRepository: IRentalsRepository) {}
+  constructor(
+    private rentalsRepository: IRentalsRepository,
+    private dateProvider: IDateProvider
+  ) {}
   async execute({
     car_id,
     expected_return_date,
     user_id
   }: IRequest): Promise<Rental> {
+    const minimumTime = 24
+
     const carUnavailable = await this.rentalsRepository.findOpenRentalByCar(
       car_id
     )
@@ -30,6 +35,16 @@ class CreateRentalUseCase {
 
     if (rentalOpenToUser) {
       throw new AppError("There's a rental in progress for the user")
+    }
+
+    const today = this.dateProvider.today()
+    const compare = this.dateProvider.compareInHours(
+      today,
+      expected_return_date
+    )
+
+    if (compare < minimumTime) {
+      throw new AppError('Invalid return time')
     }
 
     const rental = await this.rentalsRepository.create({
